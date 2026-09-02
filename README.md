@@ -70,6 +70,33 @@ To watch it run instead of headless, set `headless=false` in
 mvn test -Dheadless=false -Dbrowser=firefox
 ```
 
+## Configuration reference
+
+Every key below is read through `ConfigReader`, which checks
+`System.getProperty(key)` *first* and only then falls back to
+`config.properties` - so any key can be overridden with `-Dkey=value` using
+the exact same name, e.g. `-Dimplicit.wait=0`.
+
+| Key | Fallback if unset | Read by | Notes |
+| --- | --- | --- | --- |
+| `browser` | `chrome` | `DriverFactory.createDriver` | Only `chrome` and `firefox` have branches. Anything else (including a typo like `chrom`) hits the `default:` case and silently launches Chrome. |
+| `headless` | `true` | `DriverFactory.createDriver` | Parsed with `Boolean.parseBoolean`, so any value other than `true`/`TRUE` means false. Chrome gets `--headless=new`, Firefox gets `-headless`. |
+| `base.url` | *none* | step definitions | The only key with no default - a missing or misspelled entry returns `null` and fails at `driver.get(null)` rather than with a clear config error. |
+| `implicit.wait` | `10` | `DriverFactory.createDriver` | Seconds. Parsed with `Integer.parseInt`, so a non-numeric value throws `NumberFormatException` while the driver is being created. |
+
+Two things the file does *not* control:
+
+- **`config.properties` must exist on the classpath even if every key is
+  overridden on the command line.** `ConfigReader`'s static initialiser
+  throws `IllegalStateException: config.properties not found on classpath`
+  before any override is consulted.
+- **Chrome's window size.** `DriverFactory` always passes
+  `--window-size=1920,1080` (plus `--no-sandbox` and
+  `--disable-dev-shm-usage` for containerised CI). This matters headless,
+  where the `window().maximize()` call is effectively a no-op - change the
+  argument in `DriverFactory` if a scenario needs a different viewport.
+
+
 ## The sample scenario
 
 `login.feature` runs against https://www.saucedemo.com/, a public site Sauce
