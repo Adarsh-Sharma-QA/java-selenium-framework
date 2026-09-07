@@ -70,6 +70,22 @@ To watch it run instead of headless, set `headless=false` in
 mvn test -Dheadless=false -Dbrowser=firefox
 ```
 
+### Running a subset of scenarios by tag
+
+Tag a scenario in a `.feature` file (`@smoke`, `@regression`, etc.) and
+filter without touching `TestRunner.java`:
+
+```
+mvn test -Dcucumber.filter.tags="@smoke"
+```
+
+`cucumber-junit` reads `cucumber.filter.tags` as a system property at
+runtime, so this overrides (rather than requires editing) the `tags`
+attribute `@CucumberOptions` would otherwise need. Combine tags with
+Cucumber's boolean expressions, e.g. `"@smoke and not @wip"` to run smoke
+scenarios that aren't still in progress. `login.feature` currently has no
+tags, so add one (e.g. `@smoke` above `Scenario:`) before trying this.
+
 ## Configuration reference
 
 Every key below is read through `ConfigReader`, which checks
