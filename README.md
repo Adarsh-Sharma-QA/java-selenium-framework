@@ -86,6 +86,30 @@ Cucumber's boolean expressions, e.g. `"@smoke and not @wip"` to run smoke
 scenarios that aren't still in progress. `login.feature` currently has no
 tags, so add one (e.g. `@smoke` above `Scenario:`) before trying this.
 
+## Reports and failure screenshots
+
+`Hooks.java`'s `@After` method checks `scenario.isFailed()` and, if the
+driver implements `TakesScreenshot` (both `ChromeDriver` and
+`FirefoxDriver` do), grabs a screenshot and calls `scenario.attach(...,
+"image/png", ...)` before the driver quits. Cucumber embeds that attachment
+into both `target/cucumber-reports/report.html` and `report.json` - open
+`report.html` in a browser and expand the failed scenario to see the image
+inline. The `pretty` console plugin (also configured in `TestRunner`) does
+not render attachments, so a screenshot that exists won't show up in the
+`mvn test` console output.
+
+Two situations produce a failed scenario with **no** screenshot attached,
+which can look like the feature is broken:
+
+- The failure happened in `@Before` (e.g. `DriverFactory.getDriver()`
+  threw while creating the browser) - `tearDown` still runs, but
+  `scenario.isFailed()` is true while there's no usable driver yet, so the
+  `driver instanceof TakesScreenshot` check aside, the browser never
+  reached a page to capture.
+- A custom `WebDriver` implementation that doesn't implement
+  `TakesScreenshot` was wired into `DriverFactory` - the `instanceof` check
+  silently skips the capture rather than throwing.
+
 ## Configuration reference
 
 Every key below is read through `ConfigReader`, which checks
