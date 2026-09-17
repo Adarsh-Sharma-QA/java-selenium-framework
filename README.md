@@ -172,6 +172,21 @@ exception and returns `false`, so "assert this element is *not* there" always
 burns the full `WebDriverWait` timeout. For absence checks prefer
 `ExpectedConditions.invisibilityOfElementLocated` with a short local wait.
 
+**A failed `@Before` launches a second browser instance, silently.**
+`Hooks.tearDown()` calls `DriverFactory.getDriver()` to grab the driver for
+the failure-screenshot check - it doesn't just read the existing one. If
+`setUp()`'s call to `getDriver()` threw (e.g. `SessionNotCreatedException`
+because the installed browser doesn't match the WebDriverManager-downloaded
+driver), the `ThreadLocal` was never populated, so `tearDown()`'s call to
+`getDriver()` sees `null` and runs `createDriver()` again. If that second
+attempt succeeds, a browser window opens and is immediately quit without ever
+loading a page - visible as a flash of an extra Chrome/Firefox process in non-
+headless runs, or a second slow driver-startup delay in the logs. If it fails
+again, the second exception (not the original one) is what surfaces from
+`tearDown()`, which can obscure the real root cause. When debugging a
+`@Before` failure, check the *first* stack trace in the test output, not
+necessarily the last one.
+
 **Timeouts behave unpredictably.** The framework sets both an implicit wait
 (`implicit.wait`, applied in `DriverFactory`) and 15s explicit waits (in
 `BasePage`). Selenium warns against mixing the two; if you hit odd waiting
