@@ -154,6 +154,43 @@ with your own flow.
    and assert on the outcome.
 4. `mvn test`.
 
+## Adding a new browser
+
+`DriverFactory.createDriver()` only has branches for `chrome` and `firefox`
+(anything else falls through to the `default:` case and launches Chrome -
+see the Configuration reference table above). To add Edge:
+
+1. Add the dependency - WebDriverManager already knows how to resolve it,
+   nothing extra needed there:
+   ```xml
+   <dependency>
+       <groupId>org.seleniumhq.selenium</groupId>
+       <artifactId>selenium-edge-driver</artifactId>
+       <version>${selenium.version}</version>
+   </dependency>
+   ```
+2. Add a `case "edge":` branch in `DriverFactory.createDriver()`, mirroring
+   the Chrome branch:
+   ```java
+   case "edge":
+       WebDriverManager.edgedriver().setup();
+       EdgeOptions edgeOptions = new EdgeOptions();
+       if (ConfigReader.headless()) {
+           edgeOptions.addArguments("--headless=new");
+       }
+       driver = new EdgeDriver(edgeOptions);
+       break;
+   ```
+3. Set `browser=edge` in `config.properties` (or pass `-Dbrowser=edge`).
+
+No other class needs to change - `ConfigReader.browser()`, the `ThreadLocal`
+lifecycle in `getDriver()`/`quitDriver()`, and the `implicitlyWait()`/
+`maximize()` calls after the switch are all browser-agnostic. Note the
+headless flag isn't uniform across browsers: Chrome and (new) Edge both
+accept `--headless=new`, but Firefox still uses the older single-dash
+`-headless` - copy the flag style from the branch you're closest to, not
+from a different browser's branch.
+
 ## Troubleshooting
 
 **A second runner class doesn't run.** Surefire is pinned to
