@@ -154,6 +154,37 @@ with your own flow.
    and assert on the outcome.
 4. `mvn test`.
 
+### Sharing state between step definition classes
+
+Once a second step class exists (e.g. `CartSteps` that needs the username
+`LoginSteps` logged in with), the natural move is a shared object passed
+through constructors. That doesn't work out of the box here: the `pom.xml`
+has no Cucumber dependency-injection module, so Cucumber uses its default
+object factory, which only instantiates glue classes through a public
+no-argument constructor. A step class with constructor parameters fails at
+scenario start with a `CucumberBackendException` about a missing public
+zero-argument constructor.
+
+Don't work around it with `static` fields - with the `ThreadLocal` driver
+the framework is set up for parallel runs, and static state would leak
+between scenarios and threads. Instead add PicoContainer (no annotations or
+config needed), pinned to the same version as the other Cucumber artifacts:
+
+```xml
+<dependency>
+    <groupId>io.cucumber</groupId>
+    <artifactId>cucumber-picocontainer</artifactId>
+    <version>${cucumber.version}</version>
+    <scope>test</scope>
+</dependency>
+```
+
+Then create a plain class (e.g. `stepdefinitions/ScenarioContext.java` with
+a `String loggedInUser` field) and take it as a constructor argument in every
+step class that needs it. PicoContainer creates one instance per scenario and
+hands the same object to all step classes - and to `Hooks` - then discards it
+when the scenario ends, so nothing carries over to the next scenario.
+
 ## Adding a new browser
 
 `DriverFactory.createDriver()` only has branches for `chrome` and `firefox`
